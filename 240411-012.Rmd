@@ -1,0 +1,2349 @@
+---
+title: "230425-01"
+author: "Hsuan"
+date: "2023-04-25"
+output:
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+    extra_dependencies:
+      ctex: UTF8
+    number_sections: yes
+    df_print: kable
+    toc: yes
+classoptions: "hyperref, 12pt, a4paper"
+---
+
+
+
+---
+New Filter out, reeduce other cells in pre 1
+SCT > Merge
+
+
+---
+
+
+
+
+```{r}
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("cowplot")
+library("beepr")
+library("SeuratDisk")
+library("ggplot2")
+library("data.table")
+library("ggpubr")
+library("data.table")
+library("ggnewscale")      
+library("SCpubr")
+library(qs)
+library(doParallel)
+knitr::opts_chunk$set(cache = TRUE)
+# 檢測和設置多核處理
+numCoresToUse <- detectCores() -1
+doParallel::registerDoParallel(cores = numCoresToUse)
+set.seed(2234)
+
+```
+
+
+```{r}
+remotes::install_version("SeuratObject", "4.1.4", repos = c("https://satijalab.r-universe.dev", getOption("repos")))
+remotes::install_version("Seurat", "4.4.0", repos = c("https://satijalab.r-universe.dev", getOption("repos")))
+```
+
+
+```{r}
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+remotes::install_github("mojaveazure/seurat-disk")
+```
+
+
+
+```{r}
+#load("230425-01 filter SCT Map down to 8000 samples.RData")
+
+
+# 使用 qsave() 将列表保存为一个文件
+qsave( pre.1.data, "pre.1.data.qs", nthreads = numCoresToUse)
+qsave( pre.2.data, "pre.2.data.qs", nthreads = numCoresToUse)
+qsave( pre.3.data, "pre.3.data.qs", nthreads = numCoresToUse)
+qsave( post.1.data, "post.1.data.qs", nthreads = numCoresToUse)
+qsave( post.2.data, "post.2.data.qs", nthreads = numCoresToUse)
+qsave( post.3.data, "post.3.data.qs", nthreads = numCoresToUse)
+
+# 使用 qread() 从文件中读取对象
+Pre_1  <- qread("pre.1.data.qs", nthreads = numCoresToUse)
+Pre_2  <- qread("pre.2.data.qs", nthreads = numCoresToUse)
+Pre_3  <- qread("pre.3.data.qs", nthreads = numCoresToUse)
+Post_1 <- qread("post.1.data.qs", nthreads = numCoresToUse)
+Post_2 <- qread("post.2.data.qs", nthreads = numCoresToUse)
+Post_3 <- qread("post.3.data.qs", nthreads = numCoresToUse)
+
+
+#Pre_1 <- pre.1.data
+#Pre_2 <- pre.2.data
+#Pre_3 <- pre.3.data
+#Post_1 <- post.1.data
+#Post_2 <- post.2.data
+#Post_3 <- post.3.data
+```
+
+
+
+#排順序
+```{r}
+Pre_1@meta.data$predicted.celltype.l1 <- factor(Pre_1@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Post_1@meta.data$predicted.celltype.l1 <- factor(Post_1@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Pre_2@meta.data$predicted.celltype.l1 <- factor(Pre_2@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Post_2@meta.data$predicted.celltype.l1 <- factor(Post_2@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Pre_3@meta.data$predicted.celltype.l1 <- factor(Pre_3@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Post_3@meta.data$predicted.celltype.l1 <- factor(Post_3@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+
+```
+
+
+
+
+
+
+```{r}
+p11_n2_data <- as.data.frame(p11n2$data)
+p12_n2_data <- as.data.frame(p12n2$data)
+p21_n2_data <- as.data.frame(p21n2$data)
+p22_n2_data <- as.data.frame(p22n2$data)
+p31_n2_data <- as.data.frame(p31n2$data)
+p32_n2_data <- as.data.frame(p32n2$data)
+
+fwrite(p11_n2_data, row.names = F, "p11_n2_data.csv")
+fwrite(p12_n2_data, row.names = F, "p12_n2_data.csv")
+fwrite(p21_n2_data, row.names = F, "p21_n2_data.csv")
+fwrite(p22_n2_data, row.names = F, "p22_n2_data.csv")
+fwrite(p31_n2_data, row.names = F, "p31_n2_data.csv")
+fwrite(p32_n2_data, row.names = F, "p32_n2_data.csv")
+
+
+```
+
+
+
+
+
+
+
+```{r}
+test.markers <- c("CD3D", "CD8A", "CD8B", "CD4", "PLCG2", "FCGR3A", "TCF7", "CD27", "ITGAX", "HLA-DRA", "HLA-DRB1", "HLA-DQA1", "HLA-DQB1", "HLA-DPA1", "HLA-DPB1", "ERAP1", "TAP1", "TAP2", "TAPBP", "CIITA", "CD14", "CD68", "CD79A")
+
+p11n2 <- DotPlot(Pre_1, features = (test.markers), scale.max = 90, scale.min = 0, cols = c("white", "blue4"), dot.scale = 8, group.by = "predicted.celltype.l1") + RotatedAxis() + 
+     labs(x = "",
+       y = "",
+      title = "Pre-treatment"
+      )+
+   theme(plot.title = element_text(hjust = 0.5, size=20, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=16), axis.text.y=element_text(size=16))+ NoLegend()
+
+
+
+p12n2 <- DotPlot(Post_1, features = (test.markers), scale.max = 90, scale.min = 0, cols = c("white", "red3"), dot.scale = 8, group.by = "predicted.celltype.l1") + RotatedAxis() + 
+        labs(x = "",
+       y = "",
+      title = "Post-treatment"
+      )+
+   theme(plot.title = element_text(hjust = 0.5, size=20, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=16), axis.text.y=element_text(size=16))+ NoLegend()
+
+
+p21n2 <- DotPlot(Pre_2, features = (test.markers), scale.max = 90, scale.min = 0, cols = c("white", "blue4"), dot.scale = 8, group.by = "predicted.celltype.l1") + RotatedAxis() + 
+     labs(x = "",
+       y = "",
+      title = "Pre-treatment"
+      )+
+   theme(plot.title = element_text(hjust = 0.5, size=20, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=16), axis.text.y=element_text(size=16))+ NoLegend()
+
+p22n2 <- DotPlot(Post_2, features = (test.markers), scale.max = 90, scale.min = 0, cols = c("white", "red3"), dot.scale = 8, group.by = "predicted.celltype.l1") + RotatedAxis() + 
+      labs(x = "",
+       y = "",
+      title = "Post-treatment"
+      )+
+   theme(plot.title = element_text(hjust = 0.5, size=20, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=16), axis.text.y=element_text(size=16))+ NoLegend()
+
+p31n2 <- DotPlot(Pre_3, features = (test.markers), scale.max = 90, scale.min = 0, cols = c("white", "blue4"), dot.scale = 8, group.by = "predicted.celltype.l1") + RotatedAxis() + 
+       labs(x = "",
+       y = "",
+      title = "Pre-treatment"
+      )+
+   theme(plot.title = element_text(hjust = 0.5, size=20, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=16), axis.text.y=element_text(size=16))+ NoLegend()
+
+p32n2 <- DotPlot(Post_3, features = (test.markers), scale.max = 90, scale.min = 0, cols = c("white", "red3"), dot.scale = 8, group.by = "predicted.celltype.l1") + RotatedAxis() + 
+       labs(x = "",
+       y = "",
+      title = "Post-treatment"
+      )+
+   theme(plot.title = element_text(hjust = 0.5, size=20, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=16), axis.text.y=element_text(size=16))+ NoLegend()
+
+
+p11n2
+p12n2
+p21n2
+p22n2
+p31n2
+p32n2
+```
+
+
+```{r}
+CR_plot <- plot_grid(
+    p11n2 + theme(plot.margin = unit(c(0, 0, -0.5, 0), "lines")),
+  p12n2 + theme(plot.margin = unit(c(0, 0, -0.5, 0), "lines")),
+  nrow = 1
+) +
+  labs(title = "Complete response")  +
+  theme(
+    plot.title = element_text(vjust = 4, hjust = 0.5, size = 22, face = "plain"),
+    plot.margin = unit(c(2, 0, 0, 0), "lines")
+  )
+
+
+SD_plot <- plot_grid(
+    p21n2 + theme(plot.margin = unit(c(0, 0, -0.5, 0), "lines")),
+  p22n2 + theme(plot.margin = unit(c(0, 0, -0.5, 0), "lines")),
+  nrow = 1
+) +
+  labs(title = "Stable disease")  +
+  theme(
+    plot.title = element_text(vjust = 4, hjust = 0.5, size = 22, face = "plain"),
+    plot.margin = unit(c(2, 0, 0, 0), "lines")
+  )
+
+
+PD_plot <- plot_grid(
+  p31n2 + theme(plot.margin = unit(c(0, 0, -0.5, 0), "lines")),
+  p32n2 + theme(plot.margin = unit(c(0, 0, -0.5, 0), "lines")),
+  nrow = 1,
+  align = 'v'
+) +
+  labs(title = "Progressive disease") +
+  theme(
+    plot.title = element_text(vjust = 4, hjust = 0.5, size = 22, face = "plain"),
+    plot.margin = unit(c(2, 0, 0, 0), "lines")
+  )
+
+
+CR_plot
+SD_plot
+PD_plot
+
+
+```
+
+
+
+
+```{r}
+png(file="Comb_cell marker90.png", width=5500, height=4300, res=300)
+plot_grid(
+          CR_plot,
+          SD_plot,
+          PD_plot,
+          nrow = 3
+)
+dev.off()
+```
+
+
+
+
+
+
+
+# Load reference
+```{r}
+# reference <- LoadH5Seurat("pbmc_multimodal.h5seurat")
+#load("/Volumes/2T_SSD/scRNA analysis/PBMC reference.RData")
+load("/Volumes/2T_SSD/scRNA analysis/230425-01 filter SCT Map down to 8000 samples.RData")
+```
+
+# Load data
+```{r}
+pre.1 <- Read10X(data.dir="/Users/hsuan/Dropbox/實驗/Immunotherapy/Analysis/_Data/1-pre")
+post.1 <- Read10X(data.dir="/Users/hsuan/Dropbox/實驗/Immunotherapy/Analysis/_Data/1-post")
+pre.2 <- Read10X(data.dir="/Users/hsuan/Dropbox/實驗/Immunotherapy/Analysis/_Data/2-pre")
+post.2 <- Read10X(data.dir="/Users/hsuan/Dropbox/實驗/Immunotherapy/Analysis/_Data/2-post")
+pre.3 <- Read10X(data.dir="/Users/hsuan/Dropbox/實驗/Immunotherapy/Analysis/_Data/3-pre")
+post.3 <- Read10X(data.dir="/Users/hsuan/Dropbox/實驗/Immunotherapy/Analysis/_Data/3-post")
+```
+
+# 將data轉成SeuratObject格式
+```{r}
+pre.1 <- CreateSeuratObject(counts = pre.1, min.cells = 3, project = "Pre", min.features = 200)
+post.1 <- CreateSeuratObject(counts = post.1, min.cells = 3, project = "Post", min.features = 200)
+pre.2 <- CreateSeuratObject(counts = pre.2, min.cells = 3, project = "Pre", min.features = 200)
+post.2 <- CreateSeuratObject(counts = post.2, min.cells = 3, project = "Post", min.features = 200)
+pre.3 <- CreateSeuratObject(counts = pre.3, min.cells = 3, project = "Pre", min.features = 200)
+post.3 <- CreateSeuratObject(counts = post.3, min.cells = 3, project = "Post", min.features = 200)
+```
+
+
+#Filter out
+```{r}
+#加入mitochondria percent欄位以供Filter out
+pre.1 <- PercentageFeatureSet(pre.1, pattern = "^MT-", col.name = "percent.mt")
+post.1 <- PercentageFeatureSet(post.1, pattern = "^MT-", col.name = "percent.mt")
+pre.2 <- PercentageFeatureSet(pre.2, pattern = "^MT-", col.name = "percent.mt")
+post.2 <- PercentageFeatureSet(post.2, pattern = "^MT-", col.name = "percent.mt")
+pre.3 <- PercentageFeatureSet(pre.3, pattern = "^MT-", col.name = "percent.mt")
+post.3 <- PercentageFeatureSet(post.3, pattern = "^MT-", col.name = "percent.mt")
+```
+
+
+```{r}
+#Filter out
+pre.1.data <- subset(pre.1, subset = nFeature_RNA > 500 & nFeature_RNA < 4000 & nCount_RNA > 1100 & nCount_RNA < 14000 &percent.mt < 15)
+post.1.data <- subset(post.1, subset = nFeature_RNA > 500 & nFeature_RNA < 4000 & nCount_RNA > 1100 & nCount_RNA < 14000 &percent.mt < 15)
+pre.2.data <- subset(pre.2, subset = nFeature_RNA > 800 & nFeature_RNA < 7000 & nCount_RNA > 500 & nCount_RNA < 40000 &percent.mt < 15)
+post.2.data <- subset(post.2, subset = nFeature_RNA > 800 & nFeature_RNA < 7000 & nCount_RNA > 500 & nCount_RNA < 40000 &percent.mt < 15)
+pre.3.data <- subset(pre.3, subset = nFeature_RNA > 800 & nFeature_RNA < 7000 & nCount_RNA > 500 & nCount_RNA < 40000 &percent.mt < 15)
+post.3.data <- subset(post.3, subset = nFeature_RNA > 800 & nFeature_RNA < 7000 & nCount_RNA > 500 & nCount_RNA < 40000 &percent.mt < 15)
+Sys.time()
+```
+
+
+
+
+
+
+
+# Normalization > Mapping > Integration 
+#Mapping時會重做
+```{r}
+# Normalized data, run sctransform, 跟reference一樣的方法與參數
+#pre.1.data <- SCTransform(pre.1.data, verbose = FALSE)
+#post.1.data <- SCTransform(post.1.data, verbose = FALSE)
+#pre.2.data <- SCTransform(pre.2.data, verbose = FALSE)
+#post.2.data <- SCTransform(post.2.data, verbose = FALSE)
+#pre.3.data <- SCTransform(pre.3.data, verbose = FALSE)
+#post.3.data <- SCTransform(post.3.data, verbose = FALSE)
+#beep(8)
+```
+
+
+
+
+```{r}
+pre.1.data@meta.data$patient <- "CR_pre"
+pre.2.data@meta.data$patient <- "SD_pre"
+pre.3.data@meta.data$patient <- "PD_pre"
+
+post.1.data@meta.data$patient <- "CR_post"
+post.2.data@meta.data$patient <- "SD_post"
+post.3.data@meta.data$patient <- "PD_post"
+
+pre.1.data@meta.data$orig.ident <- "Pre"
+pre.2.data@meta.data$orig.ident <- "Pre"
+pre.3.data@meta.data$orig.ident <- "Pre"
+
+post.1.data@meta.data$orig.ident <- "Post"
+post.2.data@meta.data$orig.ident <- "Post"
+post.3.data@meta.data$orig.ident <- "Post"
+```
+
+
+
+```{r}
+save(pre.1.data, post.1.data, pre.2.data, post.2.data, pre.3.data, post.3.data, file="/Volumes/2T_SSD/scRNA analysis/230425-01 filter SCT samples.RData")
+#beep(8)
+```
+
+
+
+```{r}
+# Map to reference
+Sys.time()
+# Find anchors
+anchors.data <- FindTransferAnchors(reference = reference, query = pre.1.data, normalization.method = "SCT", reference.reduction = "spca", dims = 1:50)
+
+# Mapping
+pre.1.data <- MapQuery(anchorset = anchors.data, query = pre.1.data, reference = reference, refdata = list(celltype.l1 = "celltype.l1", celltype.l2 = "celltype.l2", predicted_ADT = "ADT"), reference.reduction = "spca", reduction.model = "wnn.umap")
+
+Sys.time()
+DefaultAssay(pre.1.data) <- "RNA"
+
+# Run the standard workflow for visualization and clustering
+pre.1.data <- ScaleData(pre.1.data, verbose = FALSE)
+pre.1.data <- FindVariableFeatures(pre.1.data, selection.method = "vst", nfeatures = 3000)
+pre.1.data <- RunPCA(pre.1.data, npcs = 30, verbose = FALSE)
+pre.1.data <- RunUMAP(pre.1.data, reduction = "pca", dims = 1:30)
+pre.1.data <- FindNeighbors(pre.1.data, reduction = "pca", dims = 1:30)
+pre.1.data <- FindClusters(pre.1.data, resolution = 0.5)
+
+# Map to reference
+Sys.time()
+# Find anchors
+anchors.data <- FindTransferAnchors(reference = reference, query = post.1.data, normalization.method = "SCT", reference.reduction = "spca", dims = 1:50)
+
+# Mapping
+post.1.data <- MapQuery(anchorset = anchors.data, query = post.1.data, reference = reference, refdata = list(celltype.l1 = "celltype.l1", celltype.l2 = "celltype.l2", predicted_ADT = "ADT"), reference.reduction = "spca", reduction.model = "wnn.umap")
+
+Sys.time()
+DefaultAssay(post.1.data) <- "RNA"
+
+# Run the standard workflow for visualization and clustering
+post.1.data <- ScaleData(post.1.data, verbose = FALSE)
+post.1.data <- FindVariableFeatures(post.1.data, selection.method = "vst", nfeatures = 3000)
+post.1.data <- RunPCA(post.1.data, npcs = 30, verbose = FALSE)
+post.1.data <- RunUMAP(post.1.data, reduction = "pca", dims = 1:30)
+post.1.data <- FindNeighbors(post.1.data, reduction = "pca", dims = 1:30)
+post.1.data <- FindClusters(post.1.data, resolution = 0.5)
+
+# Map to reference
+Sys.time()
+# Find anchors
+anchors.data <- FindTransferAnchors(reference = reference, query = pre.2.data, normalization.method = "SCT", reference.reduction = "spca", dims = 1:50)
+
+
+# Mapping
+pre.2.data <- MapQuery(anchorset = anchors.data, query = pre.2.data, reference = reference, refdata = list(celltype.l1 = "celltype.l1", celltype.l2 = "celltype.l2", predicted_ADT = "ADT"), reference.reduction = "spca", reduction.model = "wnn.umap")
+
+Sys.time()
+DefaultAssay(pre.2.data) <- "RNA"
+
+# Run the standard workflow for visualization and clustering
+pre.2.data <- ScaleData(pre.2.data, verbose = FALSE)
+pre.2.data <- FindVariableFeatures(pre.2.data, selection.method = "vst", nfeatures = 3000)
+pre.2.data <- RunPCA(pre.2.data, npcs = 30, verbose = FALSE)
+pre.2.data <- RunUMAP(pre.2.data, reduction = "pca", dims = 1:30)
+pre.2.data <- FindNeighbors(pre.2.data, reduction = "pca", dims = 1:30)
+pre.2.data <- FindClusters(pre.2.data, resolution = 0.5)
+
+# Map to reference
+Sys.time()
+# Find anchors
+anchors.data <- FindTransferAnchors(reference = reference, query = post.2.data, normalization.method = "SCT", reference.reduction = "spca", dims = 1:50)
+
+# Mapping
+post.2.data <- MapQuery(anchorset = anchors.data, query = post.2.data, reference = reference, refdata = list(celltype.l1 = "celltype.l1", celltype.l2 = "celltype.l2", predicted_ADT = "ADT"), reference.reduction = "spca", reduction.model = "wnn.umap")
+
+Sys.time()
+DefaultAssay(post.2.data) <- "RNA"
+
+# Run the standard workflow for visualization and clustering
+post.2.data <- ScaleData(post.2.data, verbose = FALSE)
+post.2.data <- FindVariableFeatures(post.2.data, selection.method = "vst", nfeatures = 3000)
+post.2.data <- RunPCA(post.2.data, npcs = 30, verbose = FALSE)
+post.2.data <- RunUMAP(post.2.data, reduction = "pca", dims = 1:30)
+post.2.data <- FindNeighbors(post.2.data, reduction = "pca", dims = 1:30)
+post.2.data <- FindClusters(post.2.data, resolution = 0.5)
+
+# Map to reference
+Sys.time()
+# Find anchors
+anchors.data <- FindTransferAnchors(reference = reference, query = pre.3.data, normalization.method = "SCT", reference.reduction = "spca", dims = 1:50)
+
+# Mapping
+pre.3.data <- MapQuery(anchorset = anchors.data, query = pre.3.data, reference = reference, refdata = list(celltype.l1 = "celltype.l1", celltype.l2 = "celltype.l2", predicted_ADT = "ADT"), reference.reduction = "spca", reduction.model = "wnn.umap")
+
+Sys.time()
+DefaultAssay(pre.3.data) <- "RNA"
+
+# Run the standard workflow for visualization and clustering
+pre.3.data <- ScaleData(pre.3.data, verbose = FALSE)
+pre.3.data <- FindVariableFeatures(pre.3.data, selection.method = "vst", nfeatures = 3000)
+pre.3.data <- RunPCA(pre.3.data, npcs = 30, verbose = FALSE)
+pre.3.data <- RunUMAP(pre.3.data, reduction = "pca", dims = 1:30)
+pre.3.data <- FindNeighbors(pre.3.data, reduction = "pca", dims = 1:30)
+pre.3.data <- FindClusters(pre.3.data, resolution = 0.5)
+
+# Map to reference
+Sys.time()
+# Find anchors
+anchors.data <- FindTransferAnchors(reference = reference, query = post.3.data, normalization.method = "SCT", reference.reduction = "spca", dims = 1:50)
+
+# Mapping
+post.3.data <- MapQuery(anchorset = anchors.data, query = post.3.data, reference = reference, refdata = list(celltype.l1 = "celltype.l1", celltype.l2 = "celltype.l2", predicted_ADT = "ADT"), reference.reduction = "spca", reduction.model = "wnn.umap")
+
+Sys.time()
+DefaultAssay(post.3.data) <- "RNA"
+
+# Run the standard workflow for visualization and clustering
+post.3.data <- ScaleData(post.3.data, verbose = FALSE)
+post.3.data <- FindVariableFeatures(post.3.data, selection.method = "vst", nfeatures = 3000)
+post.3.data <- RunPCA(post.3.data, npcs = 30, verbose = FALSE)
+post.3.data <- RunUMAP(post.3.data, reduction = "pca", dims = 1:30)
+post.3.data <- FindNeighbors(post.3.data, reduction = "pca", dims = 1:30)
+post.3.data <- FindClusters(post.3.data, resolution = 0.5)
+```
+
+
+```{r}
+save(pre.1.data, post.1.data, pre.2.data, post.2.data, pre.3.data, post.3.data, file="/Volumes/2T_SSD/scRNA analysis/230425-01 filter SCT Map samples.RData")
+#beep(8)
+```
+
+
+
+
+```{r}
+beep(8)
+```
+
+
+
+#Downsample to equal for better visual
+```{r}
+Pre_1 <-  which(pre.1.data@meta.data[["orig.ident"]] == 'Pre')
+Post_1 <- which(post.1.data@meta.data[["orig.ident"]] == 'Post')
+Pre_2 <-  which(pre.2.data@meta.data[["orig.ident"]] == 'Pre')
+Post_2 <- which(post.2.data@meta.data[["orig.ident"]] == 'Post')
+Pre_3 <-  which(pre.3.data@meta.data[["orig.ident"]] == 'Pre')
+Post_3 <- which(post.3.data@meta.data[["orig.ident"]] == 'Post')
+
+Pre_11 <- sample(Pre_1, 8000)
+Post_11 <- sample(Post_1, 8000)
+Pre_21 <- sample(Pre_2, 8000)
+Post_21 <- sample(Post_2, 8000)
+Pre_31 <- sample(Pre_3, 8000)
+Post_31 <- sample(Post_3, 8000)
+
+pre.1.data <- pre.1.data[,c(Pre_11)]
+post.1.data <- post.1.data[,c(Post_11)]
+pre.2.data <- pre.2.data[,c(Pre_21)]
+post.2.data <- post.2.data[,c(Post_21)]
+pre.3.data <- pre.3.data[,c(Pre_31)]
+post.3.data <- post.3.data[,c(Post_31)]
+
+```
+
+
+```{r}
+save(pre.1.data, post.1.data, pre.2.data, post.2.data, pre.3.data, post.3.data, file="/Volumes/2T_SSD/scRNA analysis/230425-01 filter SCT Map down to 8000 samples.RData")
+```
+
+
+#merge.data = TRUE
+```{r}
+Merge.1 <- merge(pre.1.data, y = c(post.1.data, pre.2.data, post.2.data, pre.3.data, post.3.data), add.cell.ids = c("p11", "p12", "p21", "p22", "p31", "p32"), project = "Merge.1", merge.data = TRUE)
+Merge.1
+#beep(8)
+```
+
+
+
+
+```{r}
+Sys.time()
+# specify that we will perform downstream analysis on the corrected data note that the original unmodified data still resides in the 'RNA' assay
+#backup RNA
+Merge.1@assays$RNA2 <- Merge.1@assays$RNA
+
+DefaultAssay(Merge.1) <- "RNA"
+
+# Run the standard workflow for visualization and clustering
+Merge.1 <- ScaleData(Merge.1, verbose = FALSE)
+Merge.1 <- FindVariableFeatures(Merge.1, selection.method = "vst", nfeatures = 3000)
+Merge.1 <- RunPCA(Merge.1, npcs = 30, verbose = FALSE)
+Merge.1 <- RunUMAP(Merge.1, reduction = "pca", dims = 1:30)
+Merge.1 <- FindNeighbors(Merge.1, reduction = "pca", dims = 1:30)
+Merge.1 <- FindClusters(Merge.1, resolution = 0.5)
+
+Sys.time()
+#beep(8)
+```
+
+```{r}
+save(Merge.1, file="/Volumes/2T_SSD/scRNA analysis/230425-01 Merge.8000*6.RData")
+beep(8)
+```
+
+
+
+
+# 開始繪圖
+
+```{r}
+pre.1.data@meta.data$predicted.celltype.l12 <- pre.1.data@meta.data$predicted.celltype.l1
+post.1.data@meta.data$predicted.celltype.l12 <- post.1.data@meta.data$predicted.celltype.l1
+pre.2.data@meta.data$predicted.celltype.l12 <- pre.2.data@meta.data$predicted.celltype.l1
+post.2.data@meta.data$predicted.celltype.l12 <- post.2.data@meta.data$predicted.celltype.l1
+pre.3.data@meta.data$predicted.celltype.l12 <- pre.3.data@meta.data$predicted.celltype.l1
+post.3.data@meta.data$predicted.celltype.l12 <- post.3.data@meta.data$predicted.celltype.l1
+
+pre.1.data@meta.data$predicted.celltype.l1 <- factor(pre.1.data@meta.data$predicted.celltype.l1, levels = c("CD8 T", "CD4 T", "other T", "NK", "DC", "Mono", "B", "other"))
+post.1.data@meta.data$predicted.celltype.l1 <- factor(post.1.data@meta.data$predicted.celltype.l1, levels = c("CD8 T", "CD4 T", "other T", "NK", "DC", "Mono", "B", "other"))
+pre.2.data@meta.data$predicted.celltype.l1 <- factor(pre.2.data@meta.data$predicted.celltype.l1, levels = c("CD8 T", "CD4 T", "other T", "NK", "DC", "Mono", "B", "other"))
+post.2.data@meta.data$predicted.celltype.l1 <- factor(post.2.data@meta.data$predicted.celltype.l1, levels = c("CD8 T", "CD4 T", "other T", "NK", "DC", "Mono", "B", "other"))
+pre.3.data@meta.data$predicted.celltype.l1 <- factor(pre.3.data@meta.data$predicted.celltype.l1, levels = c("CD8 T", "CD4 T", "other T", "NK", "DC", "Mono", "B", "other"))
+post.3.data@meta.data$predicted.celltype.l1 <- factor(post.3.data@meta.data$predicted.celltype.l1, levels = c("CD8 T", "CD4 T", "other T", "NK", "DC", "Mono", "B", "other"))
+
+```
+
+
+
+```{r}
+DimPlot(pre.1.data, reduction = "umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(pre.2.data, reduction = "umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(pre.3.data, reduction = "umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(post.1.data, reduction = "umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(post.2.data, reduction = "umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(post.3.data, reduction = "umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+```
+
+
+
+# Immune cell population
+```{r}
+pre1 <- DimPlot(pre.1.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+post1 <- DimPlot(post.1.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+pre1
+post1
+
+pre12 <- DimPlot(pre.1.data, reduction = "ref.umap", group.by = "predicted.celltype.l2", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+post12 <- DimPlot(post.1.data, reduction = "ref.umap", group.by = "predicted.celltype.l2", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+pre12
+post12
+
+pre2 <- DimPlot(pre.2.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+post2 <- DimPlot(post.2.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+pre2
+post2
+
+pre22 <- DimPlot(pre.2.data, reduction = "ref.umap", group.by = "predicted.celltype.l2", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+post22 <- DimPlot(post.2.data, reduction = "ref.umap", group.by = "predicted.celltype.l2", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+pre22
+post22
+
+pre3 <- DimPlot(pre.3.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+post3 <- DimPlot(post.3.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+pre3
+post3
+
+pre32 <- DimPlot(pre.3.data, reduction = "ref.umap", group.by = "predicted.celltype.l2", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+post32 <- DimPlot(post.3.data, reduction = "ref.umap", group.by = "predicted.celltype.l2", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+pre32
+post32
+
+pre1l <- DimPlot(pre.1.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) +
+  labs(title = "Immune cell population") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+pre1l
+
+pre12l <- DimPlot(pre.1.data, reduction = "ref.umap", group.by = "predicted.celltype.l2", label = TRUE, label.size = 3, repel = TRUE) +
+  labs(title = "Immune cell population") +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+
+pre12l
+
+```
+
+
+```{r}
+CR_plot <- plot_grid(pre1, post1, nrow = 1) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+SD_plot <- plot_grid(pre2, post2, nrow = 1) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+PD_plot <- plot_grid(pre3, post3, nrow = 1) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+CR_plot
+SD_plot
+PD_plot
+
+```
+
+```{r}
+png(file="CR_plot.png", width=3000, height=1500, res=300)
+CR_plot
+dev.off()
+
+png(file="SD_plot.png", width=3000, height=1500, res=300)
+SD_plot
+dev.off()
+
+png(file="PD_plot.png", width=3000, height=1500, res=300)
+PD_plot
+dev.off()
+```
+
+
+
+```{r}
+pre13 <- DimPlot(pre.1.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", split.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE, size = 33) + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+post13 <- DimPlot(post.1.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", split.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+pre23 <- DimPlot(pre.2.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", split.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+post23 <- DimPlot(post.2.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", split.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+pre33 <- DimPlot(pre.3.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", split.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+post33 <- DimPlot(post.3.data, reduction = "ref.umap", group.by = "predicted.celltype.l1", split.by = "predicted.celltype.l1", label = TRUE, label.size = 3, repel = TRUE) + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+pre13
+post13
+pre23
+post23
+pre33
+post33
+
+
+CR_plot3 <- plot_grid(pre13, post13, ncol = 2) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))
+
+SD_plot3 <- plot_grid(pre23, post23, ncol = 2) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))
+
+PD_plot3 <- plot_grid(pre33, post33, ncol = 2) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))
+
+
+
+CR_plot3
+SD_plot3
+PD_plot3
+
+IM_plot3 <- plot_grid(CR_plot3, SD_plot3, PD_plot3, ncol = 1) +
+  labs(title = "Immune cell opulation")  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))
+
+
+```
+
+
+```{r}
+png(file="Population3.png", width=10000, height=3000, res=300)
+IM_plot3
+dev.off()
+
+png(file="CR_plot3.png", width=10000, height=1000, res=300)
+CR_plot3
+dev.off()
+
+png(file="SD_plot3.png", width=10000, height=1000, res=300)
+SD_plot3
+dev.off()
+
+png(file="PD_plot3.png", width=10000, height=1000, res=300)
+PD_plot3
+dev.off()
+```
+
+BiocManager::install("dittoSeq")
+```{r}
+dittoBarPlot(pre.1.data, "predicted.celltype.l1", group.by = "orig.ident", main = '')
+dittoBarPlot(post.1.data, "predicted.celltype.l1", group.by = "orig.ident", main = '')
+dittoBarPlot(pre.2.data, "predicted.celltype.l1", group.by = "orig.ident", main = '')
+dittoBarPlot(post.2.data, "predicted.celltype.l1", group.by = "orig.ident", main = '')
+dittoBarPlot(pre.3.data, "predicted.celltype.l1", group.by = "orig.ident", main = '')
+dittoBarPlot(post.3.data, "predicted.celltype.l1", group.by = "orig.ident", main = '')
+```
+
+```{r}
+#指定分類項目
+#細胞分組
+pre.1.data <- SetIdent(pre.1.data, value = pre.1.data@meta.data$ predicted.celltype.l1)
+post.1.data <- SetIdent(post.1.data, value = post.1.data@meta.data$ predicted.celltype.l1)
+
+pre.2.data <- SetIdent(pre.2.data, value = pre.2.data@meta.data$ predicted.celltype.l1)
+post.2.data <- SetIdent(post.2.data, value = post.2.data@meta.data$ predicted.celltype.l1)
+
+pre.3.data <- SetIdent(pre.3.data, value = pre.3.data@meta.data$ predicted.celltype.l1)
+post.3.data <- SetIdent(post.3.data, value = post.3.data@meta.data$ predicted.celltype.l1)
+```
+
+#Hightlight and Plot CD8 T
+```{r}
+DP.pre.1.CD8 <- DimPlot(pre.1.data, cells.highlight=WhichCells(pre.1.data, idents="CD8 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#f35e5a") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.1.CD8 <- DimPlot(post.1.data, cells.highlight=WhichCells(post.1.data, idents="CD8 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#f35e5a") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.2.CD8 <- DimPlot(pre.2.data, cells.highlight=WhichCells(pre.2.data, idents="CD8 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#f35e5a") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.2.CD8 <- DimPlot(post.2.data, cells.highlight=WhichCells(post.2.data, idents="CD8 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#f35e5a") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.3.CD8 <- DimPlot(pre.3.data, cells.highlight=WhichCells(pre.3.data, idents="CD8 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#f35e5a") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.3.CD8 <- DimPlot(post.3.data, cells.highlight=WhichCells(post.3.data, idents="CD8 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#f35e5a") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.1.CD8
+DP.post.1.CD8
+DP.pre.2.CD8
+DP.post.2.CD8
+DP.pre.3.CD8
+DP.post.3.CD8
+
+
+
+```
+
+```{r}
+CR.CD8 <- plot_grid(DP.pre.1.CD8, DP.post.1.CD8, nrow = 1) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+SD.CD8 <- plot_grid(DP.pre.2.CD8, DP.post.2.CD8, nrow = 1) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+PD.CD8 <- plot_grid(DP.pre.3.CD8, DP.post.3.CD8, nrow = 1) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+CR.CD8
+SD.CD8
+PD.CD8
+
+DP.CD8 <- ggarrange(CR.CD8, SD.CD8, PD.CD8, nrow = 3, ncol = 1)
+DP.CD8
+
+
+
+```
+
+
+
+
+
+```{r}
+png(file="DP.pre.1.CD8.png", width=1500, height=1500, res=300)
+DP.pre.1.CD8
+dev.off()
+
+png(file="DP.pre.2.CD8.png", width=1500, height=1500, res=300)
+DP.pre.2.CD8
+dev.off()
+
+png(file="DP.pre.3.CD8.png", width=1500, height=1500, res=300)
+DP.pre.3.CD8
+dev.off()
+
+png(file="DP.post.1.CD8.png", width=1500, height=1500, res=300)
+DP.post.1.CD8
+dev.off()
+
+png(file="DP.post.2.CD8.png", width=1500, height=1500, res=300)
+DP.post.2.CD8
+dev.off()
+
+png(file="DP.post.3.CD8.png", width=1500, height=1500, res=300)
+DP.post.3.CD8
+dev.off()
+
+png(file="DP.CD8.png", width=3000, height=3000, res=300)
+DP.CD8
+dev.off()
+
+
+```
+
+
+
+
+
+#Hightlight and Plot CD4 T
+```{r}
+DP.pre.1.CD4 <- DimPlot(pre.1.data, cells.highlight=WhichCells(pre.1.data, idents="CD4 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#c18506") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.1.CD4 <- DimPlot(post.1.data, cells.highlight=WhichCells(post.1.data, idents="CD4 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#c18506") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.2.CD4 <- DimPlot(pre.2.data, cells.highlight=WhichCells(pre.2.data, idents="CD4 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#c18506") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.2.CD4 <- DimPlot(post.2.data, cells.highlight=WhichCells(post.2.data, idents="CD4 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#c18506") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.3.CD4 <- DimPlot(pre.3.data, cells.highlight=WhichCells(pre.3.data, idents="CD4 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#c18506") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.3.CD4 <- DimPlot(post.3.data, cells.highlight=WhichCells(post.3.data, idents="CD4 T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#c18506") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15))
+
+DP.pre.1.CD4
+DP.post.1.CD4
+DP.pre.2.CD4
+DP.post.2.CD4
+DP.pre.3.CD4
+DP.post.3.CD4
+```
+
+
+```{r}
+CR.CD4 <- plot_grid(DP.pre.1.CD4, DP.post.1.CD4, nrow = 1) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+SD.CD4 <- plot_grid(DP.pre.2.CD4, DP.post.2.CD4, nrow = 1) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+PD.CD4 <- plot_grid(DP.pre.3.CD4, DP.post.3.CD4, nrow = 1) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+CR.CD4
+SD.CD4
+PD.CD4
+
+DP.CD4 <- ggarrange(CR.CD4, SD.CD4, PD.CD4, nrow = 3, ncol = 1)
+DP.CD4
+```
+
+
+
+
+
+```{r}
+png(file="DP.pre.1.CD4.png", width=1500, height=1500, res=300)
+DP.pre.1.CD4
+dev.off()
+png(file="DP.post.1.CD4.png", width=1500, height=1500, res=300)
+DP.post.1.CD4
+dev.off()
+
+png(file="DP.pre.2.CD4.png", width=1500, height=1500, res=300)
+DP.pre.2.CD4
+dev.off()
+png(file="DP.post.2.CD4.png", width=1500, height=1500, res=300)
+DP.post.2.CD4
+dev.off()
+
+png(file="DP.pre.3.CD4.png", width=1500, height=1500, res=300)
+DP.pre.3.CD4
+dev.off()
+png(file="DP.post.3.CD4.png", width=1500, height=1500, res=300)
+DP.post.3.CD4
+dev.off()
+
+
+png(file="DP.CD4.png", width=3000, height=3000, res=300)
+DP.CD4
+dev.off()
+```
+
+
+#Hightlight and Plot other T
+```{r}
+DP.pre.1.otherT <- DimPlot(pre.1.data, cells.highlight=WhichCells(pre.1.data, idents="other T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#6ba204") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.1.otherT <- DimPlot(post.1.data, cells.highlight=WhichCells(post.1.data, idents="other T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#6ba204") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.2.otherT <- DimPlot(pre.2.data, cells.highlight=WhichCells(pre.2.data, idents="other T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#6ba204") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.2.otherT <- DimPlot(post.2.data, cells.highlight=WhichCells(post.2.data, idents="other T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#6ba204") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.3.otherT <- DimPlot(pre.3.data, cells.highlight=WhichCells(pre.3.data, idents="other T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#6ba204") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.3.otherT <- DimPlot(post.3.data, cells.highlight=WhichCells(post.3.data, idents="other T"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#6ba204") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15))
+
+DP.pre.1.otherT
+DP.post.1.otherT
+DP.pre.2.otherT
+DP.post.2.otherT
+DP.pre.3.otherT
+DP.post.3.otherT
+```
+
+
+```{r}
+CR.otherT <- plot_grid(DP.pre.1.otherT, DP.post.1.otherT, nrow = 1) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+SD.otherT <- plot_grid(DP.pre.2.otherT, DP.post.2.otherT, nrow = 1) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+PD.otherT <- plot_grid(DP.pre.3.otherT, DP.post.3.otherT, nrow = 1) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+CR.otherT
+SD.otherT
+PD.otherT
+
+DP.otherT <- ggarrange(CR.otherT, SD.otherT, PD.otherT, nrow = 3, ncol = 1)
+DP.otherT
+```
+
+
+
+
+
+```{r}
+png(file="DP.pre.1.otherT.png", width=1500, height=1500, res=300)
+DP.pre.1.otherT
+dev.off()
+png(file="DP.post.1.otherT.png", width=1500, height=1500, res=300)
+DP.post.1.otherT
+dev.off()
+
+png(file="DP.pre.2.otherT.png", width=1500, height=1500, res=300)
+DP.pre.2.otherT
+dev.off()
+png(file="DP.post.2.otherT.png", width=1500, height=1500, res=300)
+DP.post.2.otherT
+dev.off()
+
+png(file="DP.pre.3.otherT.png", width=1500, height=1500, res=300)
+DP.pre.3.otherT
+dev.off()
+png(file="DP.post.3.otherT.png", width=1500, height=1500, res=300)
+DP.post.3.otherT
+dev.off()
+
+
+png(file="DP.otherT.png", width=3000, height=3000, res=300)
+DP.otherT
+dev.off()
+```
+
+
+#Hightlight and Plot NK
+```{r}
+DP.pre.1.NK <- DimPlot(pre.1.data, cells.highlight=WhichCells(pre.1.data, idents="NK"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#18b554") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.1.NK <- DimPlot(post.1.data, cells.highlight=WhichCells(post.1.data, idents="NK"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#18b554") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.2.NK <- DimPlot(pre.2.data, cells.highlight=WhichCells(pre.2.data, idents="NK"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#18b554") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.2.NK <- DimPlot(post.2.data, cells.highlight=WhichCells(post.2.data, idents="NK"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#18b554") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.3.NK <- DimPlot(pre.3.data, cells.highlight=WhichCells(pre.3.data, idents="NK"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#18b554") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.3.NK <- DimPlot(post.3.data, cells.highlight=WhichCells(post.3.data, idents="NK"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#18b554") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15))
+
+DP.pre.1.NK
+DP.post.1.NK
+DP.pre.2.NK
+DP.post.2.NK
+DP.pre.3.NK
+DP.post.3.NK
+```
+
+
+```{r}
+CR.NK <- plot_grid(DP.pre.1.NK, DP.post.1.NK, nrow = 1) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+SD.NK <- plot_grid(DP.pre.2.NK, DP.post.2.NK, nrow = 1) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+PD.NK <- plot_grid(DP.pre.3.NK, DP.post.3.NK, nrow = 1) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+CR.NK
+SD.NK
+PD.NK
+
+DP.NK <- ggarrange(CR.NK, SD.NK, PD.NK, nrow = 3, ncol = 1)
+DP.NK
+```
+
+
+
+
+
+```{r}
+png(file="DP.pre.1.NK.png", width=1500, height=1500, res=300)
+DP.pre.1.NK
+dev.off()
+png(file="DP.post.1.NK.png", width=1500, height=1500, res=300)
+DP.post.1.NK
+dev.off()
+
+png(file="DP.pre.2.NK.png", width=1500, height=1500, res=300)
+DP.pre.2.NK
+dev.off()
+png(file="DP.post.2.NK.png", width=1500, height=1500, res=300)
+DP.post.2.NK
+dev.off()
+
+png(file="DP.pre.3.NK.png", width=1500, height=1500, res=300)
+DP.pre.3.NK
+dev.off()
+png(file="DP.post.3.NK.png", width=1500, height=1500, res=300)
+DP.post.3.NK
+dev.off()
+
+
+png(file="DP.NK.png", width=3000, height=3000, res=300)
+DP.NK
+dev.off()
+```
+
+
+#Hightlight and Plot DC
+```{r}
+DP.pre.1.DC <- DimPlot(pre.1.data, cells.highlight=WhichCells(pre.1.data, idents="DC"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#17b3b7") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.1.DC <- DimPlot(post.1.data, cells.highlight=WhichCells(post.1.data, idents="DC"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#17b3b7") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.2.DC <- DimPlot(pre.2.data, cells.highlight=WhichCells(pre.2.data, idents="DC"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#17b3b7") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.2.DC <- DimPlot(post.2.data, cells.highlight=WhichCells(post.2.data, idents="DC"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#17b3b7") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.3.DC <- DimPlot(pre.3.data, cells.highlight=WhichCells(pre.3.data, idents="DC"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#17b3b7") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.3.DC <- DimPlot(post.3.data, cells.highlight=WhichCells(post.3.data, idents="DC"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#17b3b7") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15))
+
+DP.pre.1.DC
+DP.post.1.DC
+DP.pre.2.DC
+DP.post.2.DC
+DP.pre.3.DC
+DP.post.3.DC
+```
+
+
+```{r}
+CR.DC <- plot_grid(DP.pre.1.DC, DP.post.1.DC, nrow = 1) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+SD.DC <- plot_grid(DP.pre.2.DC, DP.post.2.DC, nrow = 1) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+PD.DC <- plot_grid(DP.pre.3.DC, DP.post.3.DC, nrow = 1) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+CR.DC
+SD.DC
+PD.DC
+
+DP.DC <- ggarrange(CR.DC, SD.DC, PD.DC, nrow = 3, ncol = 1)
+DP.DC
+```
+
+
+
+
+
+```{r}
+png(file="DP.pre.1.DC.png", width=1500, height=1500, res=300)
+DP.pre.1.DC
+dev.off()
+png(file="DP.post.1.DC.png", width=1500, height=1500, res=300)
+DP.post.1.DC
+dev.off()
+
+png(file="DP.pre.2.DC.png", width=1500, height=1500, res=300)
+DP.pre.2.DC
+dev.off()
+png(file="DP.post.2.DC.png", width=1500, height=1500, res=300)
+DP.post.2.DC
+dev.off()
+
+png(file="DP.pre.3.DC.png", width=1500, height=1500, res=300)
+DP.pre.3.DC
+dev.off()
+png(file="DP.post.3.DC.png", width=1500, height=1500, res=300)
+DP.post.3.DC
+dev.off()
+
+
+png(file="DP.DC.png", width=3000, height=3000, res=300)
+DP.DC
+dev.off()
+```
+
+
+#Hightlight and Plot Mono
+```{r}
+DP.pre.1.Mono <- DimPlot(pre.1.data, cells.highlight=WhichCells(pre.1.data, idents="Mono"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#1296ff") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.1.Mono <- DimPlot(post.1.data, cells.highlight=WhichCells(post.1.data, idents="Mono"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#1296ff") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.2.Mono <- DimPlot(pre.2.data, cells.highlight=WhichCells(pre.2.data, idents="Mono"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#1296ff") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.2.Mono <- DimPlot(post.2.data, cells.highlight=WhichCells(post.2.data, idents="Mono"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#1296ff") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.3.Mono <- DimPlot(pre.3.data, cells.highlight=WhichCells(pre.3.data, idents="Mono"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#1296ff") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.3.Mono <- DimPlot(post.3.data, cells.highlight=WhichCells(post.3.data, idents="Mono"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#1296ff") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15))
+
+DP.pre.1.Mono
+DP.post.1.Mono
+DP.pre.2.Mono
+DP.post.2.Mono
+DP.pre.3.Mono
+DP.post.3.Mono
+```
+
+
+```{r}
+CR.Mono <- plot_grid(DP.pre.1.Mono, DP.post.1.Mono, nrow = 1) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+SD.Mono <- plot_grid(DP.pre.2.Mono, DP.post.2.Mono, nrow = 1) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+PD.Mono <- plot_grid(DP.pre.3.Mono, DP.post.3.Mono, nrow = 1) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+CR.Mono
+SD.Mono
+PD.Mono
+
+DP.Mono <- ggarrange(CR.Mono, SD.Mono, PD.Mono, nrow = 3, ncol = 1)
+DP.Mono
+```
+
+
+
+
+
+```{r}
+png(file="DP.pre.1.Mono.png", width=1500, height=1500, res=300)
+DP.pre.1.Mono
+dev.off()
+png(file="DP.post.1.Mono.png", width=1500, height=1500, res=300)
+DP.post.1.Mono
+dev.off()
+
+png(file="DP.pre.2.Mono.png", width=1500, height=1500, res=300)
+DP.pre.2.Mono
+dev.off()
+png(file="DP.post.2.Mono.png", width=1500, height=1500, res=300)
+DP.post.2.Mono
+dev.off()
+
+png(file="DP.pre.3.Mono.png", width=1500, height=1500, res=300)
+DP.pre.3.Mono
+dev.off()
+png(file="DP.post.3.Mono.png", width=1500, height=1500, res=300)
+DP.post.3.Mono
+dev.off()
+
+
+png(file="DP.Mono.png", width=3000, height=3000, res=300)
+DP.Mono
+dev.off()
+```
+
+
+#Hightlight and Plot B
+```{r}
+DP.pre.1.B <- DimPlot(pre.1.data, cells.highlight=WhichCells(pre.1.data, idents="B"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#b95eff") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.1.B <- DimPlot(post.1.data, cells.highlight=WhichCells(post.1.data, idents="B"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#b95eff") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.2.B <- DimPlot(pre.2.data, cells.highlight=WhichCells(pre.2.data, idents="B"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#b95eff") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.2.B <- DimPlot(post.2.data, cells.highlight=WhichCells(post.2.data, idents="B"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#b95eff") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.3.B <- DimPlot(pre.3.data, cells.highlight=WhichCells(pre.3.data, idents="B"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#b95eff") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.3.B <- DimPlot(post.3.data, cells.highlight=WhichCells(post.3.data, idents="B"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#b95eff") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15))
+
+DP.pre.1.B
+DP.post.1.B
+DP.pre.2.B
+DP.post.2.B
+DP.pre.3.B
+DP.post.3.B
+```
+
+
+```{r}
+CR.B <- plot_grid(DP.pre.1.B, DP.post.1.B, nrow = 1) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+SD.B <- plot_grid(DP.pre.2.B, DP.post.2.B, nrow = 1) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+PD.B <- plot_grid(DP.pre.3.B, DP.post.3.B, nrow = 1) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+CR.B
+SD.B
+PD.B
+
+DP.B <- ggarrange(CR.B, SD.B, PD.B, nrow = 3, ncol = 1)
+DP.B
+```
+
+
+
+
+
+```{r}
+png(file="DP.pre.1.B.png", width=1500, height=1500, res=300)
+DP.pre.1.B
+dev.off()
+png(file="DP.post.1.B.png", width=1500, height=1500, res=300)
+DP.post.1.B
+dev.off()
+
+png(file="DP.pre.2.B.png", width=1500, height=1500, res=300)
+DP.pre.2.B
+dev.off()
+png(file="DP.post.2.B.png", width=1500, height=1500, res=300)
+DP.post.2.B
+dev.off()
+
+png(file="DP.pre.3.B.png", width=1500, height=1500, res=300)
+DP.pre.3.B
+dev.off()
+png(file="DP.post.3.B.png", width=1500, height=1500, res=300)
+DP.post.3.B
+dev.off()
+
+
+png(file="DP.B.png", width=3000, height=3000, res=300)
+DP.B
+dev.off()
+```
+
+
+#Hightlight and Plot other
+```{r}
+DP.pre.1.other <- DimPlot(pre.1.data, cells.highlight=WhichCells(pre.1.data, idents="other"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#fc41c1") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.1.other <- DimPlot(post.1.data, cells.highlight=WhichCells(post.1.data, idents="other"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#fc41c1") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.2.other <- DimPlot(pre.2.data, cells.highlight=WhichCells(pre.2.data, idents="other"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#fc41c1") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.2.other <- DimPlot(post.2.data, cells.highlight=WhichCells(post.2.data, idents="other"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#fc41c1") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.pre.3.other <- DimPlot(pre.3.data, cells.highlight=WhichCells(pre.3.data, idents="other"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#fc41c1") + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DP.post.3.other <- DimPlot(post.3.data, cells.highlight=WhichCells(post.3.data, idents="other"), reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 0.5, cols.highlight = "#fc41c1") + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15))
+
+DP.pre.1.other
+DP.post.1.other
+DP.pre.2.other
+DP.post.2.other
+DP.pre.3.other
+DP.post.3.other
+```
+
+
+```{r}
+CR.other <- plot_grid(DP.pre.1.other, DP.post.1.other, nrow = 1) +
+  labs(title = "Complete response")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+SD.other <- plot_grid(DP.pre.2.other, DP.post.2.other, nrow = 1) +
+  labs(title = "Stable disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+PD.other <- plot_grid(DP.pre.3.other, DP.post.3.other, nrow = 1) +
+  labs(title = "Progressive disease")  +
+  theme(plot.title = element_text(hjust = 0.5, size=16, face = "plain"))
+
+CR.other
+SD.other
+PD.other
+
+DP.other <- ggarrange(CR.other, SD.other, PD.other, nrow = 3, ncol = 1)
+DP.other
+```
+
+
+
+
+
+```{r}
+png(file="DP.pre.1.other.png", width=1500, height=1500, res=300)
+DP.pre.1.other
+dev.off()
+png(file="DP.post.1.other.png", width=1500, height=1500, res=300)
+DP.post.1.other
+dev.off()
+
+png(file="DP.pre.2.other.png", width=1500, height=1500, res=300)
+DP.pre.2.other
+dev.off()
+png(file="DP.post.2.other.png", width=1500, height=1500, res=300)
+DP.post.2.other
+dev.off()
+
+png(file="DP.pre.3.other.png", width=1500, height=1500, res=300)
+DP.pre.3.other
+dev.off()
+png(file="DP.post.3.other.png", width=1500, height=1500, res=300)
+DP.post.3.other
+dev.off()
+
+
+png(file="DP.other.png", width=3000, height=3000, res=300)
+DP.other
+dev.off()
+```
+
+
+
+
+
+
+#排順序
+```{r}
+Pre_1@meta.data$predicted.celltype.l1 <- factor(Pre_1@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Post_1@meta.data$predicted.celltype.l1 <- factor(Post_1@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Pre_2@meta.data$predicted.celltype.l1 <- factor(Pre_2@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Post_2@meta.data$predicted.celltype.l1 <- factor(Post_2@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Pre_3@meta.data$predicted.celltype.l1 <- factor(Pre_3@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Post_3@meta.data$predicted.celltype.l1 <- factor(Post_3@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+
+```
+
+
+
+
+
+
+#Set cd8t.cells subset
+```{r}
+#指定分類項目
+#細胞分組
+pre.1.data <- SetIdent(pre.1.data, value = pre.1.data@meta.data$ predicted.celltype.l1)
+cd8t.cells.pre.1 <- subset(pre.1.data, idents = "CD8 T")
+post.1.data <- SetIdent(post.1.data, value = post.1.data@meta.data$ predicted.celltype.l1)
+cd8t.cells.post.1 <- subset(post.1.data, idents = "CD8 T")
+
+pre.2.data <- SetIdent(pre.2.data, value = pre.2.data@meta.data$ predicted.celltype.l1)
+cd8t.cells.pre.2 <- subset(pre.2.data, idents = "CD8 T")
+post.2.data <- SetIdent(post.2.data, value = post.2.data@meta.data$ predicted.celltype.l1)
+cd8t.cells.post.2 <- subset(post.2.data, idents = "CD8 T")
+
+pre.3.data <- SetIdent(pre.3.data, value = pre.3.data@meta.data$ predicted.celltype.l1)
+cd8t.cells.pre.3 <- subset(pre.3.data, idents = "CD8 T")
+post.3.data <- SetIdent(post.3.data, value = post.3.data@meta.data$ predicted.celltype.l1)
+cd8t.cells.post.3 <- subset(post.3.data, idents = "CD8 T")
+```
+
+
+
+
+#Plot cd8t.cells
+```{r}
+DimPlot(cd8t.cells.pre.1, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#f35e5a')) + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+
+DimPlot(cd8t.cells.post.1, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#f35e5a')) + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(cd8t.cells.pre.2, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#f35e5a')) + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(cd8t.cells.post.2, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#f35e5a')) + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(cd8t.cells.pre.3, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#f35e5a')) + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(cd8t.cells.post.3, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#f35e5a')) + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+
+```
+
+
+
+
+
+#Set cd4t.cells subset
+```{r}
+#指定分類項目
+#細胞分組
+pre.1.data <- SetIdent(pre.1.data, value = pre.1.data@meta.data$ predicted.celltype.l1)
+cd4t.cells.pre.1 <- subset(pre.1.data, idents = "CD4 T")
+post.1.data <- SetIdent(post.1.data, value = post.1.data@meta.data$ predicted.celltype.l1)
+cd4t.cells.post.1 <- subset(post.1.data, idents = "CD4 T")
+
+pre.2.data <- SetIdent(pre.2.data, value = pre.2.data@meta.data$ predicted.celltype.l1)
+cd4t.cells.pre.2 <- subset(pre.2.data, idents = "CD4 T")
+post.2.data <- SetIdent(post.2.data, value = post.2.data@meta.data$ predicted.celltype.l1)
+cd4t.cells.post.2 <- subset(post.2.data, idents = "CD4 T")
+
+pre.3.data <- SetIdent(pre.3.data, value = pre.3.data@meta.data$ predicted.celltype.l1)
+cd4t.cells.pre.3 <- subset(pre.3.data, idents = "CD4 T")
+post.3.data <- SetIdent(post.3.data, value = post.3.data@meta.data$ predicted.celltype.l1)
+cd4t.cells.post.3 <- subset(post.3.data, idents = "CD4 T")
+```
+
+#Plot cd4t.cells
+```{r}
+DimPlot(cd4t.cells.pre.1, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#c18506')) + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+
+DimPlot(cd4t.cells.post.1, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#c18506')) + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(cd4t.cells.pre.2, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#c18506')) + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(cd4t.cells.post.2, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#c18506')) + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(cd4t.cells.pre.3, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#c18506')) + NoLegend() +
+  labs(title = "Pre-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"))+
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+DimPlot(cd4t.cells.post.3, reduction = "ref.umap", label = F, label.size = 3, repel = TRUE, size = 33, cols = c('#c18506')) + NoLegend() +
+  labs(title = "Post-treatment")+
+  theme(strip.text.x = element_text(size = 12, face = "plain"))  +
+  theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain")) +
+  scale_x_continuous(n.breaks = 6, limits=c(-15.5, 15)) +
+   scale_y_continuous(n.breaks = 6, limits=c(-15.5, 15)) 
+
+
+```
+
+
+```{r}
+
+p1 <- DimPlot(Inte1, reduction = "umap", group.by = "orig.ident")
+p2 <- DimPlot(Inte1, reduction = "umap", label = TRUE, repel = TRUE)
+p3 <- DimPlot(Inte1, reduction = "umap", split.by = "orig.ident")
+p4 <- DimPlot(Inte1, reduction = "umap", label = F, repel = F)
+
+p1
+p2
+p3
+p4
+
+
+
+
+```
+
+
+
+```{r}
+Inte11 <- Inte1
+Inte11@meta.data$orig.ident <- factor(Inte11@meta.data$orig.ident, levels = c("Pre", "Post"))
+DefaultAssay(Inte11) <- "RNA"
+# Run the standard workflow for visualization and clustering
+Inte11 <- ScaleData(Inte11, verbose = FALSE)
+Inte11 <- FindVariableFeatures(Inte11, selection.method = "vst", nfeatures = 3000)
+Inte11 <- RunPCA(Inte11, npcs = 30, verbose = FALSE)
+Inte11 <- RunUMAP(Inte11, reduction = "pca", dims = 1:30)
+Inte11 <- FindNeighbors(Inte11, reduction = "pca", dims = 1:30)
+Inte11 <- FindClusters(Inte11, resolution = 0.5)
+
+
+
+
+p11 <- DimPlot(Inte11, reduction = "umap", group.by = "orig.ident")
+p12 <- DimPlot(Inte11, reduction = "umap", label = TRUE, repel = TRUE)
+p13 <- DimPlot(Inte11, reduction = "umap", split.by = "orig.ident")
+p14 <- DimPlot(Inte11, reduction = "umap", label = F, repel = F)
+
+p11
+p12
+p13
+p14
+
+png(file="UMAP1.png", width=3000, height=1500, res=300)
+p13
+dev.off()
+
+png(file="UMAP1.2.png", width=3000, height=1500, res=300)
+p14
+dev.off()
+```
+
+```{r}
+Inte21 <- Inte2
+Inte21@meta.data$orig.ident <- factor(Inte21@meta.data$orig.ident, levels = c("Pre", "Post"))
+DefaultAssay(Inte21) <- "RNA"
+# Run the standard workflow for visualization and clustering
+Inte21 <- ScaleData(Inte21, verbose = FALSE)
+Inte21 <- FindVariableFeatures(Inte21, selection.method = "vst", nfeatures = 3000)
+Inte21 <- RunPCA(Inte21, npcs = 30, verbose = FALSE)
+Inte21 <- RunUMAP(Inte21, reduction = "pca", dims = 1:30)
+Inte21 <- FindNeighbors(Inte21, reduction = "pca", dims = 1:30)
+Inte21 <- FindClusters(Inte21, resolution = 0.5)
+
+
+
+p21 <- DimPlot(Inte21, reduction = "umap", group.by = "orig.ident")
+p22 <- DimPlot(Inte21, reduction = "umap", label = TRUE, repel = TRUE)
+p23 <- DimPlot(Inte21, reduction = "umap", split.by = "orig.ident")
+p24 <- DimPlot(Inte21, reduction = "umap", label = F, repel = F)
+
+p21
+p22
+p23
+p24
+
+png(file="UMAP2.png", width=3000, height=1500, res=300)
+p23
+dev.off()
+
+png(file="UMAP2.2.png", width=3000, height=1500, res=300)
+p24
+dev.off()
+```
+
+```{r}
+Inte31 <- Inte3
+Inte31@meta.data$orig.ident <- factor(Inte31@meta.data$orig.ident, levels = c("Pre", "Post"))
+DefaultAssay(Inte31) <- "RNA"
+# Run the standard workflow for visualization and clustering
+Inte31 <- ScaleData(Inte31, verbose = FALSE)
+Inte31 <- FindVariableFeatures(Inte31, selection.method = "vst", nfeatures = 3000)
+Inte31 <- RunPCA(Inte31, npcs = 30, verbose = FALSE)
+Inte31 <- RunUMAP(Inte31, reduction = "pca", dims = 1:30)
+Inte31 <- FindNeighbors(Inte31, reduction = "pca", dims = 1:30)
+Inte31 <- FindClusters(Inte31, resolution = 0.5)
+
+
+
+
+p31 <- DimPlot(Inte31, reduction = "umap", group.by = "orig.ident")
+p32 <- DimPlot(Inte31, reduction = "umap", label = TRUE, repel = TRUE)
+p33 <- DimPlot(Inte31, reduction = "umap", split.by = "orig.ident")
+p34 <- DimPlot(Inte31, reduction = "umap", label = F, repel = F)
+
+p31
+p32
+p33
+p34
+
+png(file="UMAP3.png", width=3000, height=1500, res=300)
+p33
+dev.off()
+
+png(file="UMAP3.2.png", width=3000, height=1500, res=300)
+p34
+dev.off()
+```
+
+```{r}
+beep(8)
+```
+
+
+
+
+
+```{r}
+#指定features從哪裡撈資料
+Inte1 <- SetIdent(Inte1, value = Inte1@meta.data$ predicted.celltype.l1)
+Inte2 <- SetIdent(Inte2, value = Inte2@meta.data$ predicted.celltype.l1)
+Inte3 <- SetIdent(Inte3, value = Inte3@meta.data$ predicted.celltype.l1)
+
+#設定順序
+Inte1@meta.data$predicted.celltype.l1 <- factor(Inte1@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Inte2@meta.data$predicted.celltype.l1 <- factor(Inte2@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+Inte3@meta.data$predicted.celltype.l1 <- factor(Inte3@meta.data$predicted.celltype.l1, levels = c("other", "B", "Mono", "DC", "NK", "other T", "CD4 T", "CD8 T"))
+
+DefaultAssay(Inte1) <- "RNA"
+DefaultAssay(Inte2) <- "RNA"
+DefaultAssay(Inte3) <- "RNA"
+```
+
+# Combin Epigenetic landscape
+```{r}
+test.markers <- c("HIST1H3D", "HIST1H4C", "HIST1H1B", "HIST1H1C", "HIST1H1D", "HDAC9", "KAT6A", "KAT6B", "SIRT2", "SETD2", "EHMT1", "KMT2A", "KDM2A")
+png(file="Combine1.png", width=2200, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), scale.max = 100, scale.min = 0, cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() + 
+    labs(x = "Epigenetic landscapes",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="Combine2.png", width=2200, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), scale.max = 100, scale.min = 0, cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() + 
+    labs(x = "Epigenetic landscapes",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="Combine3.png", width=2200, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), scale.max = 100, scale.min = 0, cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() + 
+  labs(x = "Epigenetic landscapes",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+
+# Histone variants
+```{r}
+test.markers <- c("HIST1H1A", "HIST1H1B", "HIST1H1C", "HIST1H1D", "HIST1H3A", "HIST1H3B", "HIST1H3C", "HIST1H3D", "HIST1H3E", "HIST1H4A", "HIST1H4B", "HIST1H4C", "HIST1H4D", "HIST1H4E")
+png(file="Histone1.png", width=2200, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() + 
+    labs(x = "Histone variants",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="Histone2.png", width=2200, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() + 
+    labs(x = "Histone variants",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="Histone3.png", width=2200, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() + 
+  labs(x = "Histone variants",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+
+
+
+#HMT.markers
+```{r}
+#HMT.markers-1
+test.markers <- c("SETD1A", "SETD1B", "SETD2", "SETD3", "SETD4", "SETD5", "SETD6", "SETD7", "SETD9", "SETDB1", "SETDB2", "EHMT1", "EHMT2", "EZH1", "EZH2", "SUZ12", "SUV39H1", "SUV39H2", "WDR5")
+png(file="HMT-11.png", width=2500, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() +
+labs(x = "Histone methyltransferases",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HMT-12.png", width=2500, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone methyltransferases",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HMT-13.png", width=2500, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone methyltransferases",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+
+#HMT.markers-2
+test.markers <- c("KMT2A", "KMT2B", "KMT2C", "KMT2D", "KMT2E", "SMYD2", "SMYD3", "SMYD4", "SMYD5", "PRMT1", "PRMT2", "PRMT3", "PRMT5", "PRMT6", "PRMT7", "PRMT9", "DOT1L", "MLLT10")
+png(file="HMT-21.png", width=2500, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() +
+labs(x = "Histone methyltransferases",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HMT-22.png", width=2500, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone methyltransferases",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HMT-23.png", width=2500, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone methyltransferases",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+
+# HDM.markers
+```{r}
+test.markers <- c("KDM1A", "KDM1B", "KDM2A", "KDM2B", "KDM3A", "KDM3B", "KDM4A", "KDM4B", "KDM4C", "KDM4D", "KDM4E", "KDM4F", "KDM5A", "KDM5B", "KDM6A", "KDM6B", "KDM8", "JMJD1C", "JMJD4", "JMJD6", "JMJD7", "JMJD8")
+png(file="HDM-1.png", width=2500, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() +
+labs(x = "Histone demethylases",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HDM-2.png", width=2500, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone demethylases",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HDM-3.png", width=2500, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone demethylases",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+
+#HP.markers
+```{r}
+test.markers <- c("CBX1", "CBX2", "CBX3", "CBX4", "CBX5", "CBX6", "CBX7", "CBX8")
+png(file="HP-1.png", width=1600, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() +
+labs(x = "Heterochromatin proteins",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HP-2.png", width=1600, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Heterochromatin proteins",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HP-3.png", width=1600, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Heterochromatin proteins",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+
+#HDAC.markers
+```{r}
+test.markers <- c("HDAC1", "HDAC2", "HDAC3", "HDAC4", "HDAC5", "HDAC6", "HDAC7", "HDAC8", "HDAC9", "HDAC10", "HDAC11", "SIRT1", "SIRT2", "SIRT3", "SIRT4", "SIRT5", "SIRT6", "SIRT7")
+png(file="HDAC-1.png", width=2400, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() +
+labs(x = "Histone deacetylases",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HDAC-2.png", width=2400, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone deacetylases",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HDAC-3.png", width=2400, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone deacetylases",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+
+#HAT.markers
+```{r}
+test.markers <- c("EP300", "CREBBP", "KAT2A", "KAT2B", "KAT5", "KAT6A", "KAT6B", "KAT7", "KAT8", "KAT14", "JADE1", "JADE2", "JADE3")
+png(file="HAT-1.png", width=2000, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() +
+labs(x = "Histone acetyltransferases",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HAT-2.png", width=2000, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone acetyltransferases",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="HAT-3.png", width=2000, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Histone acetyltransferases",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+#SWI.markers
+```{r}
+test.markers <- c("SMARCC1", "SMARCC2", "SMARCA4", "SMARCA2", "SMARCB1", "SMARCE1", "SMARCD1", "SMARCD2", "SMARCD3", "ACTL6A", "ACTL6B", "BCL7A", "BCL7B", "BCL7C", "SS18", "ARID1A", "ARID1B", "DPF2", "DPF3", "BCL11A", "BCL11B", "ARID2", "PBRM1", "BRD7", "PHF10", "BRD9", "BICRA", "BICRAL")
+png(file="SWI-1.png", width=3000, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() +
+labs(x = "Chromatin remodeling complex",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="SWI-2.png", width=3000, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Chromatin remodeling complex",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="SWI-3.png", width=3000, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Chromatin remodeling complex",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+
+#DNA methylation.markers
+```{r}
+test.markers <- c("DNMT1", "DNMT3A", "DNMT3B", "TET1", "TET2", "TET3", "MBD1", "MBD2", "MBD3", "MBD4", "MECP2")
+png(file="DNA-1.png", width=1900, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() +
+labs(x = "DNA methylation related genes",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="DNA-2.png", width=1900, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "DNA methylation related genes",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="DNA-3.png", width=1900, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "DNA methylation related genes",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+#Other.markers
+```{r}
+test.markers <- c("METTL3", "METTL14", "FTO", "ALKBH5", "YTHDC2", "YTHDF1", "YTHDF2", "MGMT", "AURKA", "AURKB")
+png(file="Other-1.png", width=1760, height=1500, res=300)
+DotPlot(Inte1, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis() +
+labs(x = "Other epigenetic related genes",
+       y = "Cell type",
+       title = "Complete response")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="Other-2.png", width=1760, height=1500, res=300)
+DotPlot(Inte2, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Other epigenetic related genes",
+       y = "Cell type",
+       title = "Stable disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+png(file="Other-3.png", width=1760, height=1500, res=300)
+DotPlot(Inte3, features = (test.markers), cols = c("red3", "blue4"), dot.scale = 6, group.by = "predicted.celltype.l1", split.by = "orig.ident") + RotatedAxis()+
+labs(x = "Other epigenetic related genes",
+       y = "Cell type",
+       title = "Progressive disease")+
+   theme(plot.title = element_text(hjust = 0.5, size=14, face = "plain"), legend.text = element_text(size=12), legend.title =  element_text(size=12), axis.text.x=element_text(size=12), axis.text.y=element_text(size=12))
+dev.off()
+```
+
+
+
+
+
+
+
+```{r}
+save(Merge.1, Merge.11, file="/Volumes/2T_SSD/scRNA analysis/230223-2 Merge.11.RData")
+#beep(8)
+```
+
+
+
+
